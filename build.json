@@ -1,0 +1,8 @@
+{
+	"android": {
+		"release": {
+			"keystore": "../momentos.keystore",
+			"alias": "momentos"
+		}
+	}
+}
