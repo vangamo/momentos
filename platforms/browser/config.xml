@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.vangamo.dailylistsimple" version="1.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:gap="http://phonegap.com/ns/1.0">
-    <name>Daily List Simple</name>
+<widget id="com.vangamo.momentossimple" version="1.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:gap="http://phonegap.com/ns/1.0">
+    <name>Momentos</name>
     <description>
-        Simple and beautiful apk to write down notes and througts.
+        Simple and beautiful apk to organize your media.
     </description>
     <author email="vangamo.beta@gmail.com" href="http://vangamo.xyz/">
         vanGamo

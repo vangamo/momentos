@@ -12,8 +12,3 @@ gen
 out
 # Gradle builds
 /build
-# Android Studio
-.idea
-
-release-signing.properties
-assets
