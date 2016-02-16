@@ -278,6 +278,7 @@ var  DirectoryArray = EventtableObject.extend(
 
         ,"isEmpty": function() { return !this.dataReceived || this.data.length<=0; }
         ,"size": function() { return this.data.length; }
+        ,"toJSON": function() { var jsonData = []; try { jsonData = JSON.stringify( this.data ); } catch(e) { jsonData = []; } return jsonData; }
 /* INHERIT
         ,"on": function() { ... }
         ,"off": function() { ... }
@@ -286,12 +287,27 @@ var  DirectoryArray = EventtableObject.extend(
     });
 
 
+
+
+
+
+
+
+
+
+
+
 var MomentosApp = {
-     "directoriesToSearch": []
+      "directoriesToSearch": []
      ,"threads": 0
      ,"maxThreads": 0
      ,"cachedFiles": []
+
      ,"directories": null // [{ name, url, order, coverfile }]
+     ,"files": null
+     ,"thumbnails": []
+     ,"indexes": { "directories-uri": {}, "files-uri": {} }
+
      ,"thumbnailsCache": {}
 
     ,"init": function() {
@@ -303,66 +319,159 @@ var MomentosApp = {
         MomentosApp.directories.on(
             'add',
             function(ev) {
-                ev.items.inserted.forEach(function(itemDir) {
-                    var flexOrder = '';
-                    var imageSrc = itemDir.coverFile;
+                ev.items.inserted.forEach( function( itemDir ) {
+                    if( 'undefined' !== typeof itemDir.id && 'undefined' !== typeof itemDir.id ) {
+                        MomentosApp.indexes['directories-uri'][ itemDir.uri ] = itemDir.id;
 
-                    if( 'string' == typeof itemDir.order && !isNaN(parseInt(itemDir.order),10) ) { flexOrder = '-webkit-order: '+itemDir.order+'; order: '+itemDir.order+';'; }
-                    if( 'undefined' != typeof MomentosApp.thumbnailsCache[imageSrc] ) { imageSrc = 'data:image/jpeg;base64,' + MomentosApp.thumbnailsCache[imageSrc]; }
+                        var flexOrder = '';
 
-                    directoriesDIV.append('<div id="folder-'+itemDir.id+'" class="folder" style="'+flexOrder+'"><img id="folderPreview-'+itemDir.id+'" src="'+imageSrc+'"/><div class="title">'+itemDir.name+'</div></div>');
-
-                    if( 'data:' != imageSrc.substr(0,5) ) Caman( '#folderPreview-'+itemDir.id, function() {
-                        if( this.height > this.width ) {
-                            this.crop( this.width-1, this.width-1, 0, Math.floor( (this.height-this.width)/2 ) );
-                            }
-                        else if( this.width > this.height ) {
-                            this.crop( this.height-1, this.height-1, Math.floor( (this.width-this.height)/2 ), 0 );
+                        if( 'string' == typeof itemDir.order && !isNaN(parseInt(itemDir.order),10) ) {
+                            flexOrder = '-webkit-order: '+itemDir.order+'; order: '+itemDir.order+';';
                             }
 
-                        this.resize({"width":256}).posterize(16).render();
+                        var directoryContainer = $( '<div id="folder-'+itemDir.id+'" class="folder" style="'+flexOrder+'"></div>' );
+                        var title = $( '<div class="title">'+itemDir.name+'</div>' );
 
-                        setTimeout(function() {
-$('.log').append( 'Saving.' + '<br/>' );
-                            var canvas = $( '#folderPreview-'+itemDir.id ).get(0);
-                            var base64 = canvas.toDataURL('image/jpeg', 0.8);
+                            directoryContainer.append( title );
+                            directoriesDIV.append( directoryContainer );
 
-                            MomentosApp.thumbnailsCache[itemDir.coverFile] = base64.substr( 1+base64.indexOf(',') );
-                            localStorage.setItem( 'thumbnailsCache', JSON.stringify( MomentosApp.thumbnailsCache ) );                            
-                            },1000);
-                        });
-                    });
-console.log('Drawing...');
+
+                        if( 'undefined' !== typeof MomentosApp.thumbnails[ itemDir.coverFile ] ) {
+                            var directoryCoverImage = new Image();
+                            directoryCoverImage.id = 'cover-'+itemDir.id;
+                            directoryCoverImage.className = 'cover';
+                            directoryCoverImage.src = MomentosApp.thumbnails[ itemDir.coverFile ];
+
+                            directoryContainer.prepend( directoryCoverImage );
+                            }
+
+
+                        }});  // END if & foreach
+                setTimeout( MomentosApp.renderCovers, 0 );
                 });
+
+        MomentosApp.files      = new DirectoryArray();
+        MomentosApp.files.on(
+            'add',
+            function(ev) {
+                ev.items.inserted.forEach( function( itemFile ) {
+                    if( 'undefined' !== typeof itemFile.id && 'undefined' !== typeof itemFile.uri ) {
+                        MomentosApp.indexes['files-uri'][ itemFile.uri ] = itemFile.id;
+                        }
+                    });
+                });
+
+        MomentosApp.thumbnails = [];
+
 
         var aThumbnailsCache = localStorage.getItem( 'thumbnailsCache' );
         if( !aThumbnailsCache ) { aThumbnailsCache = '{}'; }
 
         MomentosApp.thumbnailsCache = JSON.parse( aThumbnailsCache );
 
-localStorage.setItem( 'directories', '' );
-        MomentosApp.directories.add( {"id": "1", "name":"Testing", "url":"", "order":"2", "coverFile": "example.jpg"} );
-//        MomentosApp.directories.add( {"id": "2", "name":"Camera",  "url":"file:///storage/emulated/0/DCIM/Camera/", "order":"1", "coverFile": "file:///storage/emulated/0/DCIM/Camera/testingCover.jpg.jpg"} );
-//        MomentosApp.directories.add( {"id": "2", "name":"Camera",  "url":"file:///storage/emulated/0/DCIM/Camera/", "order":"1", "coverFile": "angel.jpg"} );
-/* */
+
+
+        // First, thumbs
+
+        var aThumbs = localStorage.getItem( 'thumbnails' );
+        if( !aThumbs ) { aThumbs = [ null ]; } else { try { aThumbs = JSON.parse( aThumbs ); } catch(e) { aThumbs = [ null ]; } }
+
+        MomentosApp.thumbnails = aThumbs;
+var thumbCount=0;var thumbSize=0; for(var idx=MomentosApp.thumbnails.length-1;idx>=0;--idx){if(MomentosApp.thumbnails[idx]){ thumbCount++; thumbSize+=MomentosApp.thumbnails[idx].length; }}
+console.log('THUMBS.count=' + thumbCount + '; THUMBS.size=' + Math.floor(thumbSize/1024) + 'kb. ');
+        aThumbs=null;
+/*
+        MomentosApp.thumbnails[ 0 ] = '';
+        MomentosApp.thumbnails[ 1 ] = 'example.jpg';
+*/
+
+
+        // Second, files
+
+        var aFiles = localStorage.getItem( 'files' );
+        if( !aFiles ) { aFiles = [ { } ]; } else { try { aFiles = JSON.parse( aFiles ); } catch(e) { aFiles = [ { } ]; } }
+
+        MomentosApp.files.add( aFiles );
+        delete aFiles;
+/*
+        MomentosApp.files.add( {} );  // Leave 0 blank.
+        MomentosApp.files.add({
+                         "id":          1
+                        ,"name":       "example.jpg"
+                        ,"uri":        "Testing/example.jpg"
+                        ,"lastModify":  1229299292
+                        ,"size":        100
+                        ,"type":       "image/jpg" });
+*/
+
+        // At least, directories. It's important the order.
 
         var aDirectories = localStorage.getItem( 'directories' );
-
-        if( !aDirectories ) { aDirectories = []; } else { aDirectories = JSON.parse( aDirectories ); }
+        if( !aDirectories ) { aDirectories = [ { } ]; } else { try { aDirectories = JSON.parse( aDirectories ); } catch(e) { aDirectories = [ { } ]; } }
 
         MomentosApp.directories.add( aDirectories );
-        }
+        delete aDirectories;
+/*
+        MomentosApp.directories.add( { } );  // Leave 0 blank.
+        MomentosApp.directories.add({
+                         "id":            1
+                        ,"name":          "Testing"
+                        ,"uri":           "Testing/"
+                        ,"order":         "2"
+                        ,"coverFile":      1
+                        ,"files":         [ ]
+                        ,"max-lastModify": 1229299292
+                        ,"sum-size":       100 });
+*/
+
+
+
+        var button = document.createElement('button');
+            button.innerHTML = 'Reset';
+            button.addEventListener('click', function() {
+
+                MomentosApp.directories.data = [ {} ]; MomentosApp.directories.length = 1;
+                MomentosApp.files.data = [ {} ]; MomentosApp.files.length = 1;
+                MomentosApp.thumbnails = [ null, 'example.jpg' ];
+
+                MomentosApp.files.add({
+                                 "id":          1
+                                ,"name":       "example.jpg"
+                                ,"uri":        "Testing/example.jpg"
+                                ,"lastModify":  1229299292
+                                ,"size":        100
+                                ,"type":       "image/jpg" });
+
+                MomentosApp.directories.add({
+                                 "id":            1
+                                ,"name":          "Testing"
+                                ,"uri":           "Testing/"
+                                ,"order":         "2"
+                                ,"coverFile":      1
+                                ,"files":         [ ]
+                                ,"max-lastModify": 1229299292
+                                ,"sum-size":       100 });
+
+                localStorage.setItem( 'directories', MomentosApp.directories.toJSON() );
+                localStorage.setItem( 'files',       MomentosApp.files.toJSON() );
+                localStorage.setItem( 'thumbnails',  JSON.stringify( MomentosApp.thumbnails ) );
+console.log('Reset!');
+                });
+            document.querySelector('.dir').appendChild( button );
+
+        }  //  END method MomentosApp.init()
+
 
     ,"bindEvents": function() {
         document.addEventListener('deviceready', MomentosApp.deviceReadyListener, false);
 
-        }
+        }  //  END method MomentosApp.bindEvents()
+
 
     ,"deviceReadyListener": function() {
-$('.log').append( 'Fine.' + '<br/>' );
 
         MomentosApp.searchInSD();
-        }  //  END method deviceReadyListener()
+        }  //  END method MomentosApp.deviceReadyListener()
 
 
 /*
@@ -375,6 +484,8 @@ dirEntry = { isFile: false,
 */
 
     ,"searchInSD": function( root ) {
+
+if( !cordova || !cordova.file ) { console.log('This is not Cordova environment.'); return; }
 
         if( 'undefined' == typeof root ) {
 
@@ -393,10 +504,10 @@ console.log( 'Error.' );$('.log').append( 'Error searching root SD.' + '<br/>' )
 
 setInterval( function() { console.log('Pending: ' + MomentosApp.directoriesToSearch.length + ' threads=' + MomentosApp.threads + ' maxThreads=' + MomentosApp.maxThreads ) }, 5000 );
 
-setTimeout( function() { $('.log').append( 'Saving...' + '<br/>' ); var sDirectories = JSON.stringify( MomentosApp.directories.data ); localStorage.setItem( 'directories', sDirectories ); }, 10000 );
+//setTimeout( function() { $('.log').append( 'Saving...' + '<br/>' ); var sDirectories = JSON.stringify( MomentosApp.directories.data ); localStorage.setItem( 'directories', sDirectories ); }, 10000 );
 
             }
-        }  //  END method searchInSD()
+        }  //  END method MomentosApp.searchInSD()
 
 
     ,"searchIntoDirectory": function( directoryEntry ) {
@@ -405,43 +516,72 @@ setTimeout( function() { $('.log').append( 'Saving...' + '<br/>' ); var sDirecto
             MomentosApp.directoriesToSearch = [];
 
             MomentosApp.directoriesToSearch.push( directoryEntry );
+$('.log').append( 'Fine.' + '<br/>' );
             }
 
         var readDirectoryEntries = function( entries ) {
 ++MomentosApp.threads;
-            var directory = this.directory;
-            var lastImageFilename = '';
-            var parentName        = directory.toURL();
+            var directory       = this.directory;
+            var directoryName   = directory.toURL();
+            var directoryImages = [];
+            var lastTimestamp     = 0;
+            var lastTimestampFile = 0;
+            var sumSize           = 0;
+
 
             for( var idx=0; idx<entries.length; ++idx ) {
                 var entry      = entries[idx];
-                
 
                 if( entry.isDirectory ) {
-                    MomentosApp.processDirectory( entry, parentName );
+                    MomentosApp.processDirectory( entry, directoryName );
 
                     }
                 else if( entry.isFile ) {
-                    //MomentosApp.processFile( entry, parentName );
-                    var imageFilename = MomentosApp.processFile( entry, parentName );
-                    if( '' != imageFilename ) { lastImageFilename = imageFilename; }
+                    var imageId = MomentosApp.processFile( entry, directoryName );
+
+                    if( 0 < imageId ) {
+                        // entry is an image file
+
+                        var imageTimestamp = entry.lastModified ? entry.lastModified : 0;
+                        if( 0 === lastTimestamp || lastTimestamp <= imageTimestamp ) { lastTimestamp = imageTimestamp; lastTimestampFile = imageId; }
+                        
+                        sumSize += entry.size ? entry.size : 0;
+                        directoryImages.push( imageId );
+                        }
 
                     }
 
                 }  // END for entries
 
 
-console.log( 'Last:' + lastImageFilename );
-            if( '' != lastImageFilename ) {
-                var directoryObject = null;
+            if( 0 < directoryImages.length ) {
+                // directoryEntry has images
 
-                var otherDirs = MomentosApp.directories.filter(function(dir){return dir.url==parentName});
-                if( otherDirs.length > 0 ) {
-                    directoryObject = otherDirs[0];
-                    directoryObject.name += ' *';
+                var directoryObject = {
+                     "id":        MomentosApp.directories.length
+                    ,"name":      directory.name
+                    ,"uri":       directoryName
+                    ,"order":     ""
+                    ,"coverFile":      lastTimestampFile
+                    ,"files":          directoryImages
+                    ,"max-lastModify": lastTimestamp
+                    ,"sum-size":       sumSize
+                    };
+                var directoryIndex = MomentosApp.indexes['directories-uri'][ directoryObject.uri ]
+
+                if( 'undefined' !== typeof directoryIndex ) {
+                    // UPDATE
+
+                    var savedDirectory = MomentosApp.directories.get( directoryIndex );
+                        savedDirectory.coverFile = directoryObject.coverFile;
+                        savedDirectory.files = directoryObject.files;
+                        savedDirectory['max-lastModify'] = directoryObject['max-lastModify'];
+                        savedDirectory['sum-size'] = directoryObject['sum-size'];
                     }
                 else {
-                    directoryObject = {"id": MomentosApp.directories.length, "name":directory.name, "url":parentName, "order":"", "coverFile": lastImageFilename};
+                    // INSERT
+console.log('Saving '+directory.name);
+  
                     MomentosApp.directories.add( directoryObject );
                     }
                 }
@@ -454,7 +594,22 @@ MomentosApp.maxThreads = Math.max( MomentosApp.threads, MomentosApp.maxThreads )
             }  //  END inline-function readDirectoryEntries()
 
 
-$('.log').append( 'Fine.' + '<br/>' );
+
+
+        if( 0 === MomentosApp.directoriesToSearch.length ) {
+console.log('END');
+
+            localStorage.setItem( 'directories', MomentosApp.directories.toJSON() );
+            localStorage.setItem( 'files',       MomentosApp.files.toJSON() );
+
+            setTimeout( MomentosApp.renderCovers, 0 );
+
+/*
+$('.log').append( 'DIRECTORIES: ' + JSON.stringify( MomentosApp.directories ) + '<br/><br/>' );
+$('.log').append( 'IDX: ' + JSON.stringify( MomentosApp.indexes ) + '<br/><br/>' );
+$('.log').append( 'FILES: ' + JSON.stringify( MomentosApp.files ) + '<br/>' );
+*/
+        }
 
         var maxThreads = Math.min(10, MomentosApp.directoriesToSearch.length);
 
@@ -464,7 +619,6 @@ $('.log').append( 'Fine.' + '<br/>' );
             var directory = MomentosApp.directoriesToSearch.shift();
 
             if( directory.isDirectory ) {
-console.log( 'Listing: ' + directory.nativeURL );//$('.log').append( 'List: ' + directory.nativeURL + '<br/>' );
                 var dirReader         = directory.createReader();
 
                 dirReader.readEntries(
@@ -483,14 +637,12 @@ console.log( 'Error.' );$('.log').append( 'Error.' + '<br/>' );
     ,"processDirectory": function( entry, parentName ) {
         var filename   = parentName+entry.name;
 
-console.log( '  - ' + filename + ' (is dir)' ); //$('.log').append( '  - ' + filename + ' (is dir)' + '<br/>' );
+        if( 'file:///storage/emulated/0/Android' == filename || '.' == entry.name.substr(0,1) ) {
+            }
+        else {
+            MomentosApp.directoriesToSearch.push( entry );
+            }
 
-                                if( 'file:///storage/emulated/0/Android' == filename || '.' == entry.name.substr(0,1) ) {
-console.log( '  ---> Ignoring ' + entry.name ); //$('.log').append( '  - ' + filename + ' (is dir)' + '<br/>' );
-                                    }
-                                else {
-                                    MomentosApp.directoriesToSearch.push( entry );
-                                    }
         }  //  END method processDirectory()
 
 
@@ -500,18 +652,160 @@ console.log( '  ---> Ignoring ' + entry.name ); //$('.log').append( '  - ' + fil
 
         var validExtensions = ['jpg','jpeg','png','gif','tiff']
 
-                                if( filename.indexOf('.') > 0 && validExtensions.indexOf( filename.substr(1+filename.lastIndexOf('.')) ) >=0 ) {
-console.log( '  - ' + filename + ' (is IMAGE)' ); //$('.log').append( '  - ' + filename + ' (is JPG)' + '<br/>' );
-return fullFilename;
-                                    }
-                                else {
-// console.log( '  - ' + filename + ' (is file)' ); //$('.log').append( '  - ' + filename + ' (is file)' + '<br/>' );
-                                    }
+        if( filename.indexOf('.') > 0 && validExtensions.indexOf( filename.substr(1+filename.lastIndexOf('.')) ) >=0 ) {
 
-return '';
+            var imageFileId  = MomentosApp.files.length;
+            var imageFileObj = {
+                 "id":         imageFileId
+                ,"name":       entry.name
+                ,"uri":        entry.toURL()
+                ,"lastModify": entry.lastModified ? entry.lastModified : 0
+                ,"size":       entry.size ? entry.size : 0
+                ,"type":       entry.type ? entry.type : 0
+                };
+
+            var fileIndex = MomentosApp.indexes['files-uri'][ imageFileObj.uri ];
+
+            if( 'undefined' !== typeof fileIndex ) {
+                // UPDATE
+
+                var savedFile = MomentosApp.files.get( fileIndex );
+                    savedFile.lastModify = imageFileObj.lastModify;
+                    savedFile.size       = imageFileObj.size;
+
+                imageFileId = savedFile.id;
+                }
+            else {
+                MomentosApp.files.add( imageFileObj );
+                MomentosApp.indexes['files-uri'][ imageFileObj.uri ] = imageFileId;
+                }
+
+            return imageFileId;
+            }
+        else {
+// console.log( '  - ' + filename + ' (is file)' ); //$('.log').append( '  - ' + filename + ' (is file)' + '<br/>' );
+            }
+
+            return 0;
         }  //  END method processFile()
 
 
+
+    ,"renderCovers": function( folderIndex ) {
+
+        if( 'undefined' === typeof folderIndex ) { folderIndex = 0; }
+
+        var elements = document.querySelectorAll( '.folder' );
+
+        if( elements.length <= folderIndex ) { return; }
+
+        var currentElement = elements.item( folderIndex );
+
+        if( null != currentElement.querySelector('img') || null != currentElement.querySelector('canvas') ) {
+            setTimeout( MomentosApp.renderCovers, 0, (1+folderIndex) );
+            return;
+            }
+
+        var folderId = currentElement.id.substr( 1+currentElement.id.lastIndexOf('-') );
+            folderId *= 1;
+        var image = new Image();
+            image.id = 'cover-'+folderId;
+            image.className = 'cover';
+
+            image.addEventListener('load', function() {
+                var canvas = null;
+                var ctx = null;
+
+                var imageWidth  = image.naturalWidth;
+                var imageHeight = image.naturalHeight;
+
+                if( imageWidth / imageHeight - 1 > 0.1 ) {
+                    // Crop
+
+                    var newSize = imageWidth;
+                    if( imageWidth > imageHeight ) {
+                        var newSize = image.naturalHeight;
+                        var newX = 0+Math.floor( (imageWidth-newSize)/2 );
+                        var newY = 0;
+                        }
+                    else {
+                        var newSize = imageWidth;
+                        var newX = 0;
+                        var newY = 0+Math.floor( (imageHeight-newSize)/2 );
+                        }
+
+console.log('Must crop: ' + imageWidth + 'x' + imageHeight + ' -> ' + newSize + 'x' + newSize + '(+' + newX + '+' + newY + ')' );
+
+                    var transfCanvas = document.createElement('canvas');
+                        transfCanvas.width  = newSize;
+                        transfCanvas.height = newSize;
+                    var ctx = transfCanvas.getContext('2d');
+
+                    ctx.drawImage( image, newX, newY, newSize, newSize, 0, 0, newSize, newSize );
+
+                    canvas      = transfCanvas;
+                    imageWidth  = newSize;
+                    imageHeight = newSize;
+                    }
+
+                if( Math.min(document.querySelector('.folderList').clientWidth, 150) < imageWidth || Math.min(document.querySelector('.folderList').clientWidth, 150) < imageHeight ) {
+                    // Resize
+
+                    var newWidth  = 150;
+                    var newHeight = 150;
+console.log('Must resize: ' + imageWidth + 'x' + imageHeight + ' --> ' + newWidth + 'x' + newHeight );
+
+                    var transfCanvas = document.createElement('canvas');
+                        transfCanvas.width  = newWidth;
+                        transfCanvas.height = newHeight;
+                    var ctx = transfCanvas.getContext('2d');
+
+                    ctx.drawImage( canvas, 0, 0, newWidth, newHeight );
+
+                    canvas      = transfCanvas;
+                    imageWidth  = newWidth;
+                    imageHeight = newHeight;
+                    }
+
+
+                if( !canvas ) { setTimeout( MomentosApp.renderCovers, 0, (1+folderIndex) ); return; }
+                else {
+                    var thumbnailImage_base64 = canvas.toDataURL( 'image/jpeg', 0.8 );
+
+                    var newImage = new Image();
+                        newImage.addEventListener( 'load', function() {console.log('Size changed.'); setTimeout( MomentosApp.renderCovers, 0, (1+folderIndex) ); return; });
+                        newImage.id = 'cover-'+folderId;
+                        newImage.className = 'cover';
+                        newImage.src = thumbnailImage_base64;
+
+                    image.parentNode.replaceChild( newImage, image );
+                    delete image;
+
+                    if( thumbnailImage_base64.length <= 10*1024 ) {
+                        var directoryData = MomentosApp.directories.get( folderId );
+
+                        MomentosApp.thumbnails[ directoryData.coverFile ] = thumbnailImage_base64;
+                        delete thumbnailImage_base64;
+                        localStorage.setItem( 'thumbnails',  JSON.stringify( MomentosApp.thumbnails ) );
+var thumbCount=0;var thumbSize=0; for(var idx=MomentosApp.thumbnails.length-1;idx>=0;--idx){if(MomentosApp.thumbnails[idx]){ thumbCount++; thumbSize+=MomentosApp.thumbnails[idx].length; }}
+console.log('THUMBS.count=' + thumbCount + '; THUMBS.size=' + Math.floor(thumbSize/1024) + 'kb. ');
+                        }
+                    }
+
+                
+                return;
+                });
+            image.addEventListener('error', function() {
+                setTimeout( MomentosApp.renderCovers, 0, (1+folderIndex) );
+                return;
+                });
+console.log( 'SRC = '+MomentosApp.files.get( MomentosApp.directories.get(1*folderId)['coverFile'] )['uri'] );
+            image.src = MomentosApp.files.get( MomentosApp.directories.get(1*folderId)['coverFile'] )['uri'];
+
+        currentElement.appendChild( image );
+
+//setTimeout( MomentosApp.renderCovers, 0 );
+        }
     
     };
 

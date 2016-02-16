@@ -11,12 +11,12 @@
             * Disables use of inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
                 * Enable inline JS: add 'unsafe-inline' to default-src
         -->
-<!-- DEVEL -->
+<!-- DEVEL
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:; style-src 'self' 'unsafe-inline'; media-src *; script-src 'self' 'unsafe-inline' 'unsafe-eval'">
-<!-- DEVEL -->
+ DEVEL -->
 <!-- PROD
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:; style-src 'self'; media-src *; script-src 'self'">
-PROD -->
+ PROD -->
         <meta name="format-detection" content="telephone=no">
         <meta name="msapplication-tap-highlight" content="no">
         <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
@@ -27,9 +27,148 @@ PROD -->
         <script type="text/javascript" src="js/gallery.js"></script>
 <!-- DEVEL -->
 <script type="text/javascript">
-    $(function() {
-        });
+if( location.href.indexOf('/home/') >= 0 || '0.0.0.0' === location.host ) {
+    window.resolveLocalFileSystemURL = function( uri, onSuccess, onError ) { onSuccess.call( {}, fakeFilesystem.createDirFileEntry( uri ) ); }
 
+    var cordova = {};
+        cordova.file = {};
+        cordova.file.externalRootDirectory = '~/projects/momentosSimple/';
+
+
+
+    var fakeFilesystem = {
+        "~/projects/momentosSimple/": {
+             "name"          : "/"
+            ,"isDirectory"   : true
+            ,"isFile"        : false
+            ,"lastModified"  : 1234567890
+            ,"size"          : 0
+            ,"type"          : ""
+            }
+        ,"~/projects/momentosSimple/example.jpg": {
+             "name"          : "example.jpg"
+            ,"isDirectory"   : false
+            ,"isFile"        : true
+            ,"lastModified"  : 1234567890
+            ,"size"          : 12
+            ,"type"          : "image/jpg"
+            }
+        ,"~/projects/momentosSimple/angel.jpg": {
+             "name"          : "example.jpg"
+            ,"isDirectory"   : false
+            ,"isFile"        : true
+            ,"lastModified"  : 1234567890+2
+            ,"size"          : 12
+            ,"type"          : "image/jpg"
+            }
+
+
+        ,"createDirFileEntry": function( index ) {
+            var children   = [];
+
+            if( 'undefined' === typeof fakeFilesystem[ index ].isDirectory ) {
+                fakeFilesystem[ index ].isDirectory = index.endsWith('/');
+                }
+
+            var obj = {
+                 "name"          :  fakeFilesystem[ index ].name
+                ,"isDirectory"   :  fakeFilesystem[ index ].isDirectory
+                ,"isFile"        : !fakeFilesystem[ index ].isDirectory
+                ,"toURL"         : function() { return index.replace(cordova.file.externalRootDirectory, ''); }
+                };
+
+            if( fakeFilesystem[ index ].isDirectory ) {
+
+                obj['createReader'] = function() {
+                    var parentURI = index;
+                    children = [];
+
+                    for( var childIdx in fakeFilesystem ) {
+                        if( childIdx !== parentURI && childIdx.startsWith(parentURI) ) { children.push( childIdx ); }
+                        }
+
+                    return {
+                        "readEntries": function( onSuccess, onError ) {
+                            var createChildrenEntries = [];
+
+                            children.forEach( function( child ) {
+                                createChildrenEntries.push( fakeFilesystem.createDirFileEntry(child) );
+                                });  //  END forEach-children
+
+                            onSuccess.call( {}, createChildrenEntries );
+
+                            }  //  END fake-readEntries
+                        };  //  END fake-createReader return object
+                    };  //  END fake-createReader
+
+                }  // END if-isDirectory
+            else {
+
+                obj['lastModified'] = fakeFilesystem[ index ].lastModified;
+                obj['size']         = fakeFilesystem[ index ].size;
+                obj['type']         = fakeFilesystem[ index ].type;
+                obj['file']         = function( onSuccess, onError ) {
+
+                    };
+
+                }  // END if-else-isDirectory
+
+            return obj;
+            }
+        };
+
+
+
+    $(function() {
+        document.dispatchEvent( new Event('deviceready') );
+
+
+
+
+
+
+
+
+
+        var inputFile = document.createElement('input');
+            inputFile.id = 'pict';
+            inputFile.type = 'file';
+
+        document.querySelector('.dir').appendChild( inputFile );
+
+        inputFile.addEventListener('change', function( ev ) {
+//ev.target.files[0]
+//File { name: "example.jpg", lastModified: 1454322628000, lastModifiedDate: Date 2016-02-01T10:30:28.000Z, size: 4558, type: "image/jpeg" }
+
+            var fr = new FileReader();
+            fr.addEventListener('load', function() {
+console.log('fr: '+this.result.substr(0,10));
+
+                var image = document.createElement('img');
+                    image.id = 'img-1';
+
+                    image.addEventListener('load', function() {
+console.log( 'Image load end.');
+                        var canvas = document.createElement('canvas');
+                            canvas.id = 'cnv-1';
+                        var ctx = canvas.getContext('2d');
+                        ctx.drawImage( image, 0, 0 );
+
+                        var c = new Caman( canvas, function() {
+console.log('Caman: loaded.')
+                            });
+                    });
+
+                    image.src = this.result;
+
+                var worker = new Worker('js/task.js');
+
+                worker.postMessage( {"id": 0, "content": this.result} );
+                });
+            fr.readAsDataURL( ev.target.files[0] );
+            });
+        });
+    }
 </script>
 <!-- DEVEL -->
         <title>Momentos app</title>
@@ -46,7 +185,7 @@ PROD -->
 
 <!-- DEVEL -->
     <script type="text/javascript">
-        if( location.href.indexOf('/home/') < 0 ) { document.write('<script type="text/javascript" src="cordova.js"><' + '/script>'); }
+        if( location.href.indexOf('/home/') < 0 && '0.0.0.0' !== location.host ) { document.write('<script type="text/javascript" src="cordova.js"><' + '/script>'); }
     </script>
 <!-- DEVEL -->
 <!-- PROD
