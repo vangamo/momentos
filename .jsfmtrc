@@ -5,9 +5,7 @@
     "indent": {
       "value": "  ",
       "alignComments": false,
-      "FunctionDeclaration": 2, /*  NO SENSE */
-      /*"FunctionDeclarationClosingBrace": 1,  /*  NO SENSE */
-      "TopLevelFunctionBlock": 1,
+      "TopLevelFunctionBlock": 1
     },
     "lineBreak": {
       "before": {
@@ -16,7 +14,7 @@
         "ElseStatement": ">=1",
         "FunctionDeclaration": ">=2",
         "ObjectExpressionClosingBrace": ">=1",
-        "ReturnStatement": ">=2",
+        "ReturnStatement": ">=2"
       },
       "after": {
         "BlockStatement": ">=1",
@@ -27,15 +25,15 @@
         "ElseStatementClosingBrace": ">=2",
         "WhileStatementClosingBrace": ">=2",
         "ObjectExpressionOpeningBrace": ">=1",
-        "ReturnStatement": 1,
+        "ReturnStatement": 1
       }
     },
     "whiteSpace": {
       "removeTrailing": 1,
       "before": {
+        "AssignmentPattern": -1,
         "Property": -1,
         "FunctionName": 1,
-        "ObjectPatternComma": 0, /* NO SENSE */
         "LineComment": 2,
         "CallExpressionOpeningParentheses": 0,
         "CallExpressionClosingParentheses": 1,
@@ -48,13 +46,10 @@
         "SwitchDiscriminantOpening": 0,
         "SwitchDiscriminantClosing": 1,
         "WhileStatementConditionalOpening": 0,
-        "WhileStatementConditionalClosing": 1,
-      /*            "IfStatementClosingBrace" : 2,  /*  NO SENSE */
-      /*            "FunctionDeclarationClosingBrace" : 2,  /* NO SENSE */
+        "WhileStatementConditionalClosing": 1
       },
       "after": {
         "FunctionName": 0,
-        "ObjectPatternComma": 0, /* NO SENSE */
         "CallExpressionOpeningParentheses": 1,
         "CallExpressionClosingParentheses": 0,
         "ForInStatementExpressionOpening": 1,
@@ -66,13 +61,12 @@
         "SwitchDiscriminantOpening": 1,
         "SwitchDiscriminantClosing": 1,
         "WhileStatementConditionalOpening": 1,
-        "WhileStatementConditionalClosing": 1,
+        "WhileStatementConditionalClosing": 1
       }
     },
     "plugins": [
       "esformatter-braces",
-      "esformatter-dot-notation",
-    /*      "esformatter-jquery-chain" */
+      "esformatter-dot-notation"
     ],
     "pipe": {
       "after": [

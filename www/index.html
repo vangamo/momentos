@@ -27,6 +27,8 @@
         <script type="text/javascript" src="js/gallery.js"></script>
 <!-- DEVEL -->
 <script type="text/javascript">
+
+// APK: location.href=file:///android_asset/www/index.html
 if( location.href.indexOf('/home/') >= 0 || '0.0.0.0' === location.host ) {
     window.resolveLocalFileSystemURL = function( uri, onSuccess, onError ) { onSuccess.call( {}, fakeFilesystem.createDirFileEntry( uri ) ); }
 

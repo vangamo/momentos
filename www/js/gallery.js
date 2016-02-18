@@ -503,7 +503,7 @@ var MomentosApp = {
             }
 
           } );  // END if & foreach
-//        setTimeout( MomentosApp.renderCovers, 0 );
+
         } );
 
     MomentosApp.files = new DirectoryArray();
@@ -685,7 +685,7 @@ console.log( 'Reset!' );
   ,"searchInSD": function( root ) {
 
     if( !cordova || !cordova.file ) {
-console.log( 'This is not Cordova environment.' );
+console.log( 'This is not Cordova environment.' ); $('.log').append( 'This is not Cordova environment.' );
 
       return;
       }
@@ -706,12 +706,6 @@ console.log( 'This is not Cordova environment.' );
 console.log( 'Error.' );$( '.log' ).append( 'Error searching root SD.' + '<br/>' );
           } );
 
-//      setInterval( function() {
-//console.log( 'Pending: ' + MomentosApp.directoriesToSearch.length + ' threads=' + MomentosApp.threads + ' maxThreads=' + MomentosApp.maxThreads );
-//        }, 5000 );
-
-      //setTimeout( function() { $('.log').append( 'Saving...' + '<br/>' ); var sDirectories = JSON.stringify( MomentosApp.directories.data ); localStorage.setItem( 'directories', sDirectories ); }, 10000 );
-
       }
 
     }  //  END method MomentosApp.prototype.searchInSD()
@@ -727,7 +721,6 @@ console.log( 'Error.' );$( '.log' ).append( 'Error searching root SD.' + '<br/>'
       }
 
     var readDirectoryEntries = function( entries ) {
-//      ++MomentosApp.threads;
       var directory = this.directory;
       var directoryName = directory.toURL();
       var directoryImages = [];
@@ -789,7 +782,6 @@ console.log( 'Error.' );$( '.log' ).append( 'Error searching root SD.' + '<br/>'
           }
         else {
           // INSERT
-console.log( 'Saving ' + directory.name );
 
           MomentosApp.directories.add( directoryObject );
           }
@@ -801,9 +793,6 @@ console.log( 'Saving ' + directory.name );
         MomentosApp.searchIntoDirectory();
         }
 
-//      MomentosApp.maxThreads = Math.max( MomentosApp.threads, MomentosApp.maxThreads );
-//      --MomentosApp.threads;
-
       };  //  END inline-function readDirectoryEntries()
 
 
@@ -814,8 +803,6 @@ console.log( 'Saving ' + directory.name );
 
       localStorage.setItem( 'directories', MomentosApp.directories.toJSON() );
       localStorage.setItem( 'files', MomentosApp.files.toJSON() );
-
-console.log( 'SEARCH END' );
 
       /*
       $('.log').append( 'DIRECTORIES: ' + JSON.stringify( MomentosApp.directories ) + '<br/><br/>' );
@@ -955,18 +942,16 @@ console.log('RENDER END. Time: ' + Math.floor( (now-MomentosApp.renderStart)/100
     var coverImageFile = MomentosApp.files.get( directory.coverFile );
 
     if( !coverImageFile ) {
-console.log( 'COVER OF DIRECTORY ' + directory.name + ' IS NULL.' );
       setTimeout( MomentosApp.renderCovers, 1000, folderIndex );
 
-return;
-    }
+      return;
+      }
 
     if( !coverImageFile.uri ) {
-console.log( 'COVER OF DIRECTORY ' + directory.name + ' has null URI.' );
       setTimeout( MomentosApp.renderCovers, 1000, folderIndex );
 
-return;
-    }
+      return;
+      }
 MomentosApp.renderState = {"action": "CreatingImage", "directoryName": directory.name, "time": now };
     var image = new Image();
     image.id = 'cover-' + folderId;
@@ -977,6 +962,7 @@ try {
       var imageWidth = image.naturalWidth;
       var imageHeight = image.naturalHeight;
 
+      var transfCanvas = null;
       var canvas = document.createElement( 'canvas' );
       canvas.width = imageWidth;
       canvas.height = imageHeight;
@@ -985,10 +971,6 @@ try {
 
       ctx.drawImage( image, 0, 0, imageWidth, imageHeight );
       ctx = null;
-/*
-      var canvas = null;
-      var ctx = null;
-*/
 
 
       if( Math.max(imageWidth,imageHeight)/Math.min(imageWidth,imageHeight) - 1 > 0.1 ) {
@@ -1008,18 +990,13 @@ try {
           newY = 0 + Math.floor( ( imageHeight - newSize ) / 2 );
           }
 
-console.log( 'Must crop: ' + imageWidth + 'x' + imageHeight + ' -> ' + newSize + 'x' + newSize + '(+' + newX + '+' + newY + ')' + '  (directory='+directory.name+')' );
+//console.log( 'Must crop: ' + imageWidth + 'x' + imageHeight + ' -> ' + newSize + 'x' + newSize + '(+' + newX + '+' + newY + ')' + '  (directory='+directory.name+')' );
 MomentosApp.renderState = {"action": "Crop", "directoryName": directory.name, "time": now };
-        var transfCanvas = document.createElement( 'canvas' );
+        transfCanvas = document.createElement( 'canvas' );
         transfCanvas.width = newSize;
         transfCanvas.height = newSize;
         ctx = transfCanvas.getContext( '2d' );
-if( !canvas) {
-        ctx.drawImage( image, newX, newY, newSize, newSize, 0, 0, newSize, newSize );
-      }
-else {
         ctx.drawImage( canvas, newX, newY, newSize, newSize, 0, 0, newSize, newSize );
-      }
 
         canvas = transfCanvas;
         imageWidth = newSize;
@@ -1028,7 +1005,7 @@ else {
         transfCanvas = null;
         ctx = null;
 MomentosApp.renderState = null;
-console.log( 'Cropped!' + '  (directory='+directory.name+')' );
+//console.log( 'Cropped!' + '  (directory='+directory.name+')' );
         }
 
       if( Math.min( document.querySelector( '.folderList' ).clientWidth, 150 ) < imageWidth || Math.min( document.querySelector( '.folderList' ).clientWidth, 150 ) < imageHeight ) {
@@ -1036,19 +1013,15 @@ console.log( 'Cropped!' + '  (directory='+directory.name+')' );
 
         var newWidth = 150;
         var newHeight = 150;
-console.log( 'Must resize: ' + imageWidth + 'x' + imageHeight + ' --> ' + newWidth + 'x' + newHeight + '  (directory='+directory.name+')' );
+//console.log( 'Must resize: ' + imageWidth + 'x' + imageHeight + ' --> ' + newWidth + 'x' + newHeight + '  (directory='+directory.name+')' );
 MomentosApp.renderState = {"action": "Resize", "directoryName": directory.name, "time": now };
-        var transfCanvas = document.createElement( 'canvas' );
+        transfCanvas = document.createElement( 'canvas' );
         transfCanvas.width = newWidth;
         transfCanvas.height = newHeight;
 
         ctx = transfCanvas.getContext( '2d' );
-        if( !canvas ) {
-          ctx.drawImage( image, 0, 0, newWidth, newHeight );
-          }
-        else {
-         ctx.drawImage( canvas, 0, 0, newWidth, newHeight ); 
-          }
+        ctx.drawImage( canvas, 0, 0, newWidth, newHeight ); 
+
 
         canvas = transfCanvas;
         imageWidth = newWidth;
@@ -1057,13 +1030,13 @@ MomentosApp.renderState = {"action": "Resize", "directoryName": directory.name, 
         transfCanvas = null;
         ctx = null;
 MomentosApp.renderState = null;
-console.log( 'Resized!' + '  (directory='+directory.name+')' );
+//console.log( 'Resized!' + '  (directory='+directory.name+')' );
         }
 
 
       if( !canvas ) {
         setTimeout( MomentosApp.renderCovers, 0, ( 1 + folderIndex ) );
-console.log( 'IMG not changed. ' + '  (directory='+directory.name+')' );
+
         return;
         }
       else {
@@ -1072,7 +1045,7 @@ console.log( 'IMG not changed. ' + '  (directory='+directory.name+')' );
 MomentosApp.renderState = {"action": "SwapImage", "directoryName": directory.name, "time": now };
         var newImage = new Image();
         newImage.addEventListener( 'load', function() {
-console.log( 'Size changed.' ); setTimeout( MomentosApp.renderCovers, 0, ( 1 + folderIndex ) );
+//console.log( 'Size changed.' ); setTimeout( MomentosApp.renderCovers, 0, ( 1 + folderIndex ) );
 
           return;
           } );
@@ -1104,7 +1077,7 @@ MomentosApp.renderState = {"action": "Caching", "directoryName": directory.name,
 //console.log( 'THUMBS.count=' + thumbCount + '; THUMBS.size=' + Math.floor( thumbSize / 1024 ) + 'kb. ' );
           }
         else {
-console.log( 'THUMB so big!!! Not saved. (directory='+directory.name+', size='+Math.floor( thumbnailImage_base64.length / 1024 )+'kb.)');
+//console.log( 'THUMB so big!!! Not saved. (directory='+directory.name+', size='+Math.floor( thumbnailImage_base64.length / 1024 )+'kb.)');
           }
 MomentosApp.renderState = null;
         }
